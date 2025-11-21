@@ -84,3 +84,38 @@ func compressFile(t *testing.T, src, dest string, sync bool) {
 		require.NoError(t, compressedFile.Sync())
 	}
 }
+
+func TestFilterOutDirectories(t *testing.T) {
+	files := []IndexFile{
+		{Name: "file0"},
+		{Name: "dir1/file1"},
+		{Name: "dir1/"},
+		{Name: "dir2/"},
+		{Name: "dir2/file2"},
+		{Name: "dir3"},
+		{Name: "dir3/file3"},
+		{Name: "dir4/file4"},
+		{Name: "dir4"},
+		{Name: "dir5/innerdir/file5"},
+		{Name: "dir5/innerdir"},
+	}
+
+	filteredFiles := filterOutDirectories(files)
+
+	require.Equal(t, []IndexFile{
+		{Name: "file0"},
+		{Name: "dir1/file1"},
+		{Name: "dir2/file2"},
+		{Name: "dir3/file3"},
+		{Name: "dir4/file4"},
+		{Name: "dir5/innerdir/file5"},
+	}, filteredFiles)
+
+	require.Equal(t, 6, len(filteredFiles))
+	require.Equal(t, "file0", filteredFiles[0].Name)
+	require.Equal(t, "dir1/file1", filteredFiles[1].Name)
+	require.Equal(t, "dir2/file2", filteredFiles[2].Name)
+	require.Equal(t, "dir3/file3", filteredFiles[3].Name)
+	require.Equal(t, "dir4/file4", filteredFiles[4].Name)
+	require.Equal(t, "dir5/innerdir/file5", filteredFiles[5].Name)
+}
