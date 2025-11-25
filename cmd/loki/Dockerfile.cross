@@ -1,17 +1,25 @@
+# syntax=docker/dockerfile:1
 ARG GO_VERSION=1.25
+ARG GOARM=7
+ARG BUILDPLATFORM
 # Directories in this file are referenced from the root of the project not this folder
 # This file is intended to be called from the root like so:
 # docker build -t grafana/loki -f cmd/loki/Dockerfile .
-FROM golang:${GO_VERSION} AS goenv
-RUN go env GOARCH > /goarch && \
-    go env GOARM > /goarm
+FROM --platform=$BUILDPLATFORM golang:${GO_VERSION} AS goenv
+ARG TARGETARCH
+ARG TARGETOS
+ARG BUILDPLATFORM
+RUN echo "${TARGETARCH}" > /goarch && \
+    echo "${TARGETOS}" > /goos && \
+    echo "${GOARM}" > /goarm
 
 COPY . /src/loki
 WORKDIR /src/loki
-RUN make clean && GOARCH=$(cat /goarch) GOARM=$(cat /goarm) make BUILD_IN_CONTAINER=false loki
+RUN echo 1>&2 "Building for GOARCH=${TARGETARCH} GOOS=${TARGETOS} on host builder ${BUILDPLATFORM}"
+RUN make clean && GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOARM=${GOARM} make BUILD_IN_CONTAINER=false loki
 
 # Prepare filesystem stage
-FROM golang:${GO_VERSION} AS filesystem
+FROM --platform=$BUILDPLATFORM golang:${GO_VERSION} AS filesystem
 COPY cmd/loki/loki-local-config.yaml /local-config.yaml
 RUN mkdir -p /etc/loki /loki && \
     cp /local-config.yaml /etc/loki/local-config.yaml && \
